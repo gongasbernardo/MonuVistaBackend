@@ -4,13 +4,35 @@ const fileStorage = require('../utils/fileStorage');
 const emailService = require('../utils/emailService');
 const mongoose = require('mongoose');
 
+const normalizeJwtExpire = () => {
+  const rawExpire = process.env.JWT_EXPIRE;
+  if (!rawExpire) return '7d';
+
+  const value = String(rawExpire).trim();
+  if (!value || ['expiresin', 'undefined', 'null'].includes(value.toLowerCase())) {
+    return '7d';
+  }
+
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+
+  const normalized = value.replace(/\s+/g, '');
+  if (/^\d+(ms|s|m|h|d|w|y)$/i.test(normalized)) {
+    return normalized;
+  }
+
+  console.warn(`Invalid JWT_EXPIRE value "${rawExpire}", falling back to default 7d`);
+  return '7d';
+};
+
 // Generate JWT Token
 const generateToken = (userId) => {
   const secret = process.env.JWT_SECRET || 'default_secret_key_change_in_production';
-  const expiresIn = process.env.JWT_EXPIRE || '7d';
-  
+  const expiresIn = normalizeJwtExpire();
+
   return jwt.sign({ id: userId }, secret, {
-    expiresIn: expiresIn
+    expiresIn
   });
 };
 
